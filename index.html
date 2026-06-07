@@ -205,6 +205,7 @@ async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value.trim();
   const err = document.getElementById('login-err');
+  const btn = document.querySelector('#form-login .btn.primary');
   if (!username || !password) { err.style.display=''; err.textContent='กรุณากรอกข้อมูลให้ครบ'; return; }
 
   if (username === ADMIN) {
@@ -220,10 +221,16 @@ async function doLogin() {
     return;
   }
 
+  btn.textContent = '⏳ กำลังเข้าสู่ระบบ...';
+  btn.disabled = true;
+  err.style.display = 'none';
+
   try {
-    const result = await apiPost({ action: 'login', username, password });
-    if (!result.success) { err.style.display=''; err.textContent=result.message || 'Username หรือรหัสผ่านไม่ถูกต้อง'; return; }
-    err.style.display = 'none';
+    const result = await api({ action: 'login', username, password });
+    if (!result.success) {
+      err.style.display=''; err.textContent=result.message || 'Username หรือรหัสผ่านไม่ถูกต้อง';
+      btn.textContent = 'เข้าสู่ระบบ →'; btn.disabled = false; return;
+    }
     user = username;
     displayName = result.display_name;
     document.getElementById('main-greeting').textContent = 'สวัสดี ' + displayName + ' ⚽';
@@ -231,7 +238,10 @@ async function doLogin() {
     showScreen('main');
     await loadData();
     renderMatches();
-  } catch(e) { err.style.display=''; err.textContent='เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'; }
+  } catch(e) {
+    err.style.display=''; err.textContent='เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่';
+    btn.textContent = 'เข้าสู่ระบบ →'; btn.disabled = false;
+  }
 }
 
 async function doRegister() {
@@ -239,14 +249,22 @@ async function doRegister() {
   const password = document.getElementById('reg-password').value.trim();
   const dname = document.getElementById('reg-displayname').value.trim();
   const err = document.getElementById('register-err');
+  const btn = document.querySelector('#form-register .btn.primary');
   if (!username || !password || !dname) { err.style.display=''; err.textContent='กรุณากรอกข้อมูลให้ครบ'; return; }
   if (username.length < 3) { err.style.display=''; err.textContent='Username ต้องมีอย่างน้อย 3 ตัวอักษร'; return; }
   if (password.length < 4) { err.style.display=''; err.textContent='รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร'; return; }
   if (username === ADMIN) { err.style.display=''; err.textContent='ไม่สามารถใช้ชื่อนี้ได้'; return; }
+
+  btn.textContent = '⏳ กำลังสมัคร...';
+  btn.disabled = true;
+  err.style.display = 'none';
+
   try {
-    const result = await apiPost({ action: 'register', username, password, display_name: dname });
-    if (!result.success) { err.style.display=''; err.textContent=result.message || 'สมัครไม่สำเร็จ'; return; }
-    err.style.display = 'none';
+    const result = await api({ action: 'register', username, password, display_name: dname });
+    if (!result.success) {
+      err.style.display=''; err.textContent=result.message || 'สมัครไม่สำเร็จ';
+      btn.textContent = 'สมัครสมาชิก →'; btn.disabled = false; return;
+    }
     user = username;
     displayName = dname;
     document.getElementById('main-greeting').textContent = 'สวัสดี ' + displayName + ' ⚽';
@@ -254,7 +272,10 @@ async function doRegister() {
     showScreen('main');
     await loadData();
     renderMatches();
-  } catch(e) { err.style.display=''; err.textContent='เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่'; }
+  } catch(e) {
+    err.style.display=''; err.textContent='เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่';
+    btn.textContent = 'สมัครสมาชิก →'; btn.disabled = false;
+  }
 }
 
 function doLogout() {
@@ -268,10 +289,15 @@ function doLogout() {
 }
 
 async function loadData() {
-  document.getElementById('tab-matches').innerHTML = '<div class="spinner">กำลังโหลดข้อมูล...</div>';
+  document.getElementById('tab-matches').innerHTML = '<div class="spinner">⏳ กำลังโหลดข้อมูล...</div>';
   try {
-    matches = await api({ action: 'getMatches' });
-    myPicks = await api({ action: 'getPicks', user });
+    // โหลด matches และ picks พร้อมกันเลยค่ะ
+    const [m, p] = await Promise.all([
+      api({ action: 'getMatches' }),
+      api({ action: 'getPicks', user })
+    ]);
+    matches = m;
+    myPicks = p;
   } catch(e) {
     document.getElementById('tab-matches').innerHTML = '<div class="empty">โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่</div>';
   }
