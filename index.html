@@ -677,6 +677,38 @@ const GROUP_TEAMS = {
 let groupSettings = {};
 let myGroupPicks = {};
 
+async function saveGroupPick(group, team) {
+  try {
+    await apiPost({ action: 'saveGroupPick', username: user, group, team });
+    myGroupPicks[group] = team;
+    renderBonus();
+  } catch(e) { alert('บันทึกไม่สำเร็จ กรุณาลองใหม่ค่ะ'); }
+}
+
+async function addTop4Team() {
+  const team = document.getElementById('top4-select').value;
+  const err = document.getElementById('top4-err');
+  if (!team) { err.style.display=''; err.textContent='กรุณาเลือกทีมค่ะ'; return; }
+  const teams = [...(myTop4Pick.teams||[]), team];
+  if (teams.length > 4) { err.style.display=''; err.textContent='เลือกได้สูงสุด 4 ทีมค่ะ'; return; }
+  err.style.display = 'none';
+  try {
+    await apiPost({ action: 'saveTop4Pick', username: user, teams });
+    myTop4Pick = { teams };
+    renderBonus();
+  } catch(e) { err.style.display=''; err.textContent='บันทึกไม่สำเร็จ กรุณาลองใหม่'; }
+}
+
+async function removeTop4Team(team) {
+  if (!confirm(`ลบ ${team} ออกจาก Top 4 ของคุณไหมคะ?`)) return;
+  const teams = (myTop4Pick.teams||[]).filter(t => t !== team);
+  try {
+    await apiPost({ action: 'saveTop4Pick', username: user, teams });
+    myTop4Pick = { teams };
+    renderBonus();
+  } catch(e) { alert('ลบไม่สำเร็จ กรุณาลองใหม่ค่ะ'); }
+}
+
 async function renderBonus() {
   const el = document.getElementById('tab-bonus');
   el.innerHTML = '<div class="spinner">⏳ กำลังโหลด...</div>';
